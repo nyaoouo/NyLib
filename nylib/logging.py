@@ -63,10 +63,23 @@ def install(
         old_formatter_format = logging.Formatter.format
 
         def new_formatter_format(self, record: logging.LogRecord):
+            exc_text = None
+            if o_exc_info := record.exc_info:
+                exc_text = self.formatException(o_exc_info)
+                record.exc_info = None
+            s_text = None
+            if o_stack_info := record.stack_info:
+                s_text = self.formatStack(o_stack_info)
+                record.stack_info = None
+
             o_msg = record.msg
             res = ''
             i = 0
-            for i, line in enumerate(o_msg.split('\n')):
+            to_loop = str(o_msg).split('\n')
+            if exc_text: to_loop += exc_text.split('\n')
+            if s_text: to_loop += s_text.split('\n')
+
+            for i, line in enumerate(to_loop):
                 record.msg = line
                 if i:
                     res += '\n' + old_formatter_format(self, record)
@@ -76,7 +89,10 @@ def install(
                 record.msg = '----------------------------------------'
                 s = old_formatter_format(self, record)
                 res = s + '\n' + res + '\n' + s
+
             record.msg = o_msg
+            record.exc_info = o_exc_info
+            record.stack_info = o_stack_info
             return res
 
         logging.Formatter.format = new_formatter_format
