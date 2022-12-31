@@ -20,6 +20,14 @@ class ChainHook(list):
         elif self.func:
             return self.func(*args, **kwargs)
 
+    def remove(self, __value) -> bool:
+        try:
+            super().remove(__value)
+        except ValueError:
+            return False
+        else:
+            return True
+
 
 class ChainHookAsync(ChainHook):
     class HookCall(ChainHook.HookCall):
@@ -39,6 +47,14 @@ class ChainHookAsync(ChainHook):
 class BroadcastHook(list):
     def __call__(self, *args, **kwargs):
         return [f(*args, **kwargs) for f in self]
+
+    def remove(self, __value) -> bool:
+        try:
+            super().remove(__value)
+        except ValueError:
+            return False
+        else:
+            return True
 
 
 class BroadcastHookAsync(BroadcastHook):

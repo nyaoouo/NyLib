@@ -1,5 +1,5 @@
-
 import ctypes
+import dataclasses
 import re
 import typing
 import sys
@@ -53,61 +53,23 @@ def set_fields_from_annotations(cls: typing.Type[_CStruct]) -> typing.Type[_CStr
             fields.append((name, str_eval(type_hint)))
     if size := cls.__dict__.get('_size_'):
         try:
-            p_size = ctypes.sizeof(cls.__mro__[-2])
+            p_size = ctypes.sizeof(cls.__mro__[1])
         except TypeError:
             p_size = 0
-        fields.append(('__nys_padding__', ctypes.c_uint8 * (size - p_size)))
+        fields.append(('__nys_padding__', ctypes.c_char * (size - p_size)))
     cls._fields_ = fields
     cls._off_fields_ = off_fields
     return cls
 
 
-def struct_to_dict(data):
-    d = {}
-    for base in data.__class__.__mro__[-4::-1]:
-        base_dict = base.__dict__
-        for n, *_ in base_dict.get('_fields_', []):
-            if n!='__nys_padding__':
-                d[n] = serialize_data(getattr(data, n))
-        for n, *_ in base_dict.get('_off_fields_', []):
-            d[n] = serialize_data(getattr(data, n))
-        if (pf := base_dict.get('_properties_field_')) is None:
-            setattr(base, '_properties_field_', pf := [k for k, v in base_dict.items() if isinstance(v, property)])
-        for n in pf:
-            d[n] = serialize_data(getattr(data, n))
-    return d
-
-
-def array_to_list(data):
-    base_type = data.__class__._type_
-    if issubclass(base_type, ctypes.Array):
-        return [array_to_list(v) for v in data]
-    if issubclass(base_type, ctypes.Structure):
-        return [struct_to_dict(v) for v in data]
-    return data[:]
-
-
-def serialize_data(data):
-    if isinstance(data, ctypes.Array):
-        return array_to_list(data)
-    if isinstance(data, ctypes.Structure):
-        return struct_to_dict(data)
-    return data
-
-
-def fmt_data(data):
-    if isinstance(data, ctypes.Structure):
-        return str(struct_to_dict(data))
-    return str(data)
-
-
-def offset(off, cls=None):
+def offset(off: int, cls: typing.Type = None):
     if cls is None: return lambda _cls: offset(off, _cls)
     new_fields = []
     for base in reversed(cls.__mro__):
         if '_use_broken_old_ctypes_structure_semantics_' in cls.__dict__:
             new_fields.clear()
-        new_fields.extend(getattr(base, '_fields_', []))
+        new_fields.extend(base.__dict__.get('_fields_', []))
+        # new_fields.extend(getattr(base, '_fields_', []))
     # print(cls.__name__, new_fields)
     name_space = {
         '_use_broken_old_ctypes_structure_semantics_': True,

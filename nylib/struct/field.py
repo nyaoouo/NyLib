@@ -105,10 +105,7 @@ class BitField(FieldBase[int]):
     def __set__(self, instance, value):
         if instance is None: return self
         v = self.field_type.from_address(ctypes.addressof(instance) + self.offset)
-        if value:
-            v.value |= 1 << self.bit_offset
-        else:
-            v.value &= ~(1 << self.bit_offset)
+        v.value = (v.value & ~(self.mask << self.bit_offset) )|(value << self.bit_offset)
 
     def __repr__(self):
         return f'<Field type={self.field_type.__name__}, ofs={self.offset}:{self.bit_offset}, bits={self.bit_size}>'

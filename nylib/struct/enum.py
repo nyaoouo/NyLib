@@ -55,6 +55,10 @@ class Enum(ctypes.Structure, metaclass=EnumType):
     def __class_getitem__(cls, item: str):
         return cls(cls._name_to_value.get(item, cls._default_value))
 
+    @classmethod
+    def iter(cls):
+        return cls._name_to_value.items()
+
     @property
     def value(self) -> int:
         return self._value
@@ -70,3 +74,11 @@ class Enum(ctypes.Structure, metaclass=EnumType):
     @classmethod
     def get_value(cls, name: str) -> int:
         return cls._name_to_value.get(name, cls._default_value)
+
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.value == other
+        elif isinstance(other, str):
+            return self.name == other
+        else:
+            return super().__eq__(other)

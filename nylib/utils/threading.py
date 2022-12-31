@@ -1,19 +1,40 @@
 import threading
 import typing
+import ctypes
+
+
+def terminate_thread(t: threading.Thread, exc_type=SystemExit):
+    if not t.is_alive():return
+    try:
+        tid = next(tid for tid, tobj in threading._active.items() if tobj is t)
+    except StopIteration:
+        raise ValueError("tid not found")
+    if ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exc_type)) != 1:
+        raise SystemError("PyThreadState_SetAsyncExc failed")
 
 
 class ResEvent(threading.Event):
     def __init__(self):
         super().__init__()
         self.res = None
+        self.is_exc = False
 
     def set(self, data=None) -> None:
         self.res = data
+        self.is_exc = False
+        super().set()
+
+    def set_exception(self, exc) -> None:
+        self.res = exc
+        self.is_exc = True
         super().set()
 
     def wait(self, timeout: float | None = None) -> typing.Any:
         if super().wait(timeout):
-            return self.res
+            if self.is_exc:
+                raise self.res
+            else:
+                return self.res
         else:
             raise TimeoutError()
 
@@ -41,4 +62,3 @@ class ResEventList:
             if self.queue and self.queue[0] is evt:
                 self.queue.pop(0)
         return res
-

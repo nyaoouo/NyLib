@@ -1,5 +1,9 @@
 import logging
 
+Verbose1 = 9
+Verbose2 = 8
+Verbose3 = 7
+
 
 class AsciiFormat:
     end = 0
@@ -44,6 +48,9 @@ def install(
         use_color=True,
         multiline_process=True,
 ):
+    logging.addLevelName(Verbose1, 'Verbose1')
+    logging.addLevelName(Verbose2, 'Verbose2')
+    logging.addLevelName(Verbose3, 'Verbose3')
     if use_color:
         import platform
 

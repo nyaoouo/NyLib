@@ -1,7 +1,8 @@
 import asyncio
 import inspect
+import threading
 from functools import wraps, partial
-
+from .threading import terminate_thread
 
 
 def to_async_func(func):
@@ -14,18 +15,51 @@ def to_async_func(func):
 
     return run
 
+
+async def sub_thread_async(func, *args, _timeout: float | None = None, **kwargs):
+    res = AsyncResEvent()
+
+    def f():
+        try:
+            res.set(func(*args, **kwargs))
+        except Exception as e:
+            res.set_exception(e)
+        except SystemExit:
+            res.set_exception(TimeoutError)
+
+    (t := threading.Thread(target=f)).start()
+    try:
+        return await res.wait(_timeout)
+    except TimeoutError:
+        raise TimeoutError
+    finally:
+        if not res.is_set():
+            terminate_thread(t)
+
+
 class AsyncResEvent(asyncio.Event):
     def __init__(self):
         super().__init__()
         self.res = None
+        self.is_exc = False
+        self._loop = asyncio.get_event_loop()
 
     def set(self, data=None) -> None:
         self.res = data
-        super().set()
+        self.is_exc = False
+        self._loop.call_soon_threadsafe(super().set)
+
+    def set_exception(self, exc) -> None:
+        self.res = exc
+        self.is_exc = True
+        self._loop.call_soon_threadsafe(super().set)
 
     async def wait(self, timeout: float | None = None):
-        await super().wait()
-        return self.res
+        await asyncio.wait_for(super().wait(), timeout)
+        if self.is_exc:
+            raise self.res
+        else:
+            return self.res
 
 
 class AsyncEvtList:

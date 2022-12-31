@@ -20,7 +20,7 @@ OpenProcess.argtypes = [
 #: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686714%28v=vs.85%29.aspx
 TerminateProcess = dll.TerminateProcess
 TerminateProcess.restype = wintypes.BOOL
-OpenProcess.argtypes = [
+TerminateProcess.argtypes = [
     wintypes.HANDLE,
     wintypes.UINT,
 ]

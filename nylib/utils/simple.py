@@ -111,3 +111,28 @@ def dict_find_key(d: dict, val, strict=False):
     except StopIteration:
         raise ValueError(val)
 
+
+def try_run(try_count, exception_type=Exception, exc_cb=None):
+    def dec(func):
+        def wrapper(*args, **kwargs):
+            _try_count = try_count
+            while _try_count > 0:
+                try:
+                    return func(*args, **kwargs)
+                except exception_type as e:
+                    if _try_count <= 1:
+                        raise e
+                    _try_count -= 1
+                    if exc_cb:
+                        exc_cb(e)
+
+        return wrapper
+
+    return dec
+
+def wait_until(func, timeout=-1, interval=0.1, *args, **kwargs):
+    start = time.perf_counter()
+    while not func(*args, **kwargs):
+        if 0 < timeout < time.perf_counter() - start:
+            raise TimeoutError
+        time.sleep(interval)
