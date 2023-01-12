@@ -1,5 +1,6 @@
 import ctypes
 import dataclasses
+import functools
 
 
 def struct_to_dict(data, show_us=False):
@@ -13,7 +14,7 @@ def struct_to_dict(data, show_us=False):
             if show_us or not n[0] == '_':
                 d[n] = serialize_data(getattr(data, n))
         if (pf := base_dict.get('_properties_field_')) is None:
-            setattr(base, '_properties_field_', pf := [k for k, v in base_dict.items() if isinstance(v, property)])
+            setattr(base, '_properties_field_', pf := [k for k, v in base_dict.items() if isinstance(v, (property, functools.cached_property))])
         for n in pf:
             if show_us or not n.startswith('_'):
                 d[n] = serialize_data(getattr(data, n))
@@ -22,6 +23,8 @@ def struct_to_dict(data, show_us=False):
 
 def array_to_list(data, show_us=False):
     base_type = data.__class__._type_
+    if base_type == ctypes.c_uint8 or base_type == ctypes.c_int8 or base_type == ctypes.c_char:
+        return bytes(data)
     if issubclass(base_type, ctypes.Array):
         return [array_to_list(v, show_us) for v in data]
     if issubclass(base_type, ctypes.Structure):

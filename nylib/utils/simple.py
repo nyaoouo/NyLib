@@ -1,4 +1,5 @@
 import functools
+import struct
 import threading
 import pathlib
 import time
@@ -130,9 +131,18 @@ def try_run(try_count, exception_type=Exception, exc_cb=None):
 
     return dec
 
+
 def wait_until(func, timeout=-1, interval=0.1, *args, **kwargs):
     start = time.perf_counter()
     while not func(*args, **kwargs):
         if 0 < timeout < time.perf_counter() - start:
             raise TimeoutError
         time.sleep(interval)
+
+
+def named_tuple_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes, offset: int = 0) -> _T:
+    return t._make(s.unpack_from(buffer, offset))
+
+
+def dataclass_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes, offset: int = 0) -> _T:
+    return t(*s.unpack_from(buffer, offset))

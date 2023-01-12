@@ -45,17 +45,18 @@ def get_prime(bit_size):
 
 
 def _rsa_test():
-    p1, p2 = get_prime(32), get_prime(32)
+    p1, p2 = get_prime(1024), get_prime(1024)
     n = p1 * p2
     o = (p1 - 1) * (p2 - 1)
     e = get_prime_by_max(o)
     d = pow(e, -1, o)
     enc = lambda m: pow(m, e, n)
     dec = lambda m: pow(m, d, n)
-    print(f'n={n:#X}')
-    print(f'e={e:#X}')
-    print(f'd={d:#X}')
-    print(hex(encr := enc(100)))
+    print(f'n={n:#x}')
+    print(f'e={e:#x}')
+    print(f'd={d:#x}')
+    print(hex(encr := enc(9)))
     print(hex(dec(encr)))
+
 
 _rsa_test()
