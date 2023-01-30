@@ -146,3 +146,18 @@ def named_tuple_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearra
 
 def dataclass_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes, offset: int = 0) -> _T:
     return t(*s.unpack_from(buffer, offset))
+
+
+def wrap_error(cb, exc_type=Exception, default_rtn=None):
+    def dec(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except exc_type as e:
+                cb(e, *args, **kwargs)
+                return default_rtn
+
+        return wrapper
+
+    return dec
