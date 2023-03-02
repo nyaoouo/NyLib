@@ -1,6 +1,6 @@
 from ._lazy_chunk import lazy_chunk
 from .bit_util import bit_list_flag_get, bit_list_flag_set, bit_count, bit_iter_idx, bit_from_list, bit_to_list
-from .simple import num_arr_to_bytes, count_func_time, is_iterable, Counter, safe, fmt_sec, test_time, dict_find_key, extend_list, \
+from .simple import num_arr_to_bytes, count_func_time, is_iterable, Counter, safe, safe_lazy, fmt_sec, test_time, dict_find_key, extend_list, \
     try_run, wait_until, named_tuple_by_struct, dataclass_by_struct, wrap_error
 from .call_hook import BroadcastHook, ChainHook, BroadcastHookAsync, ChainHookAsync
 from .route import KeyRoute, KeyRouteAsync

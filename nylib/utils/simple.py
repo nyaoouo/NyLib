@@ -60,6 +60,13 @@ def safe(func: typing.Callable[[...], _T], *args, _handle=BaseException, _defaul
         return _default
 
 
+def safe_lazy(func: typing.Callable[[...], _T], *args, _handle=BaseException, _default: _T2 = None, **kwargs) -> _T | _T2:
+    try:
+        return func(*args, **kwargs)
+    except _handle:
+        return _default(*args, **kwargs)
+
+
 time_units = [
     (1e-13, "Sv"),
     (1e-12, "ps"),
