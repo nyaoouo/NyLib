@@ -71,7 +71,7 @@ class StaticPatternSearcher:
             )
         return res
 
-    def search_from_text(self, pattern: str):
+    def search_from_text(self, pattern: str) -> list[tuple[int, list[int]]]:
         _pattern, offsets = sig_to_pattern(pattern)
         return [(
             address, [g + offsets[i] for i, g in enumerate(groups)]
@@ -83,7 +83,7 @@ class StaticPatternSearcher:
     def find_points(self, pattern: str):
         return [[address + offset for offset in offsets] for address, offsets in self.search_from_text(pattern)]
 
-    def find_vals(self, pattern: str):
+    def find_vals(self, pattern: str) -> list[list[int]]:
         return [v for a, v in self.search_raw_pattern(sig_to_pattern(pattern)[0])]
 
     def find_address(self, pattern: str):
