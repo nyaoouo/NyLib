@@ -61,6 +61,7 @@ def run_rpc_server_main():
     mutex = Mutex(lock_file_name)
     if not mutex.is_lock():
         logging.debug(f'start server with pipe {{pipe_name=}} and lock {{lock_file_name=}}')
+        sys.modules['inject_server'] = server
         with mutex:
             server.serve()
 import traceback
@@ -92,7 +93,7 @@ except:
             if not self.is_starting_server:
                 threading.Thread(target=self.start_server, daemon=True).start()
             time.sleep(.1)
-            wait_until(self.is_active)
+            wait_until(self.is_active, timeout=10)
         if not self.client.is_connected.is_set():
             self.client.connect()
 
