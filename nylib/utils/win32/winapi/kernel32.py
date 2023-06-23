@@ -108,6 +108,13 @@ VirtualAllocEx.argtypes = (
 #: https://msdn.microsoft.com/en-us/library/windows/desktop/aa366899%28v=vs.85%29.aspx
 VirtualProtectEx = dll.VirtualProtectEx
 VirtualProtectEx.restype = ctypes.c_long
+VirtualProtectEx.argtypes = (
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.c_ulong,
+    ctypes.POINTER(ctypes.c_ulong)
+)
 
 #: Takes a snapshot of the specified processes, as well as the heaps, modules, and threads used by these processes.
 #:

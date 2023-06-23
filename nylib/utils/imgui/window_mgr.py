@@ -151,6 +151,7 @@ class Window:
 
 class WindowManager:
     imgui_font: typing.Any
+    current_window: Window | None = None
 
     def __init__(self, font_size=16, ini_file_name: bytes | None = b'imgui.ini', default_font_path: str = None):
         self.ident = -1
@@ -239,7 +240,9 @@ class WindowManager:
                 glfw.destroy_window(window.window)
                 self.windows.pop(title)
             else:
+                self.current_window = window
                 window.update()
+                self.current_window = None
         return True
 
     def run(self):

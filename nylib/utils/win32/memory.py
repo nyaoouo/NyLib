@@ -1,3 +1,4 @@
+import ctypes
 from ctypes import *
 from ctypes.wintypes import *
 from typing import TypeVar, Type, Callable
@@ -248,6 +249,18 @@ class RemoteMemory:
     def value(self, v: bytes):
         write_bytes(self.handle, self.address, v[:self.size])
 
+    @property
+    def protect(self):
+        mbi = structure.MEMORY_BASIC_INFORMATION()
+        if not kernel32.VirtualQueryEx(self.handle, self.address, byref(mbi), sizeof(mbi)):
+            raise WinAPIError(kernel32.GetLastError(), "VirtualQueryEx")
+        return mbi.Protect
+
+    @protect.setter
+    def protect(self, v):
+        if not kernel32.VirtualProtectEx(self.handle, self.address, self.size, v, byref(c_uint())):
+            raise WinAPIError(kernel32.GetLastError(), "VirtualProtectEx")
+
 
 aligned4 = lambda v: (v + 0x3) & (~0x3)
 aligned16 = lambda v: (v + 0xf) & (~0xf)
@@ -261,6 +274,17 @@ class Namespace:
         self.res = []
         self.ptr = 0
         self.remain = 0
+        self._protection = structure.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE
+
+    @property
+    def protection(self):
+        return self._protection
+
+    @protection.setter
+    def protection(self, v):
+        self._protection = v
+        for chunk in self.res:
+            chunk.protect = v
 
     def store(self, data: bytes):
         write_bytes(self.handle, (p_buf := self.take(len(data))), data)
@@ -271,6 +295,7 @@ class Namespace:
         if self.remain < size:
             alloc_size = max(self.chunk_size, size)
             self.res.append(new_mem := RemoteMemory(self.handle, alloc_size).alloc())
+            new_mem.protect = self.protection
             self.remain = alloc_size - size
             self.ptr = new_mem.address + size
             return new_mem.address
@@ -281,11 +306,52 @@ class Namespace:
             return res
 
     def free(self):
-        for chunk in self.res:
-            chunk.free()
+        while self.res:
+            self.res.pop().free()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.free()
+
+
+class Asm:
+    code_namespace = Namespace(kernel32.GetCurrentProcess())
+
+    def __init__(self, code: bytes = None, *func_type):
+        self._code = code
+        self._alloc_size = 0
+        self._ptr = 0
+        self._func_type = func_type or (ctypes.c_void_p,)
+        self._func = None
+        if code:
+            self._refresh()
+
+    @property
+    def code(self):
+        return self._code
+
+    @code.setter
+    def code(self, v: bytes):
+        self._code = v
+        self._refresh()
+
+    @property
+    def func_type(self):
+        return self._func_type
+
+    @func_type.setter
+    def func_type(self, v):
+        self._func_type = v
+        self._refresh()
+
+    def _refresh(self):
+        if len(self._code) > self._alloc_size:
+            self._alloc_size = aligned16(len(self._code))
+            self._ptr = Asm.code_namespace.take(self._alloc_size)
+        write_bytes(kernel32.GetCurrentProcess(), self._ptr, self._code)
+        self._func = ctypes.CFUNCTYPE(*self._func_type)(self._ptr)
+
+    def __call__(self, *args, **kwargs):
+        return self._func(*args, **kwargs)
