@@ -39,12 +39,18 @@ class Handle:
 def run_rpc_server_main():
     if {repr(alloc_console)}:
         import win32console
+        import win32file
         win32console.FreeConsole()
         win32console.AllocConsole()
-        print('alloc console')
+        buf = win32console.CreateConsoleScreenBuffer(win32file.GENERIC_WRITE, win32file.FILE_SHARE_WRITE)
+        buf.SetConsoleActiveScreenBuffer()
+        sys.stdout = sys.stderr = type('PyBuf', (), {{
+            'write': lambda s: buf.WriteConsole(s),
+            'flush': lambda: None,
+        }})
+        print('Allocated console')
     
     import threading
-    import logging
     import nylib.logging as ny_log
     from nylib.utils import Mutex, Counter
     from nylib.rpc.namedpipe_pickle import RpcServer
@@ -60,7 +66,8 @@ def run_rpc_server_main():
     server = RpcServer(pipe_name, {{"run": run_call}})
     mutex = Mutex(lock_file_name)
     if not mutex.is_lock():
-        logging.debug(f'start server with pipe {{pipe_name=}} and lock {{lock_file_name=}}')
+        # import logging
+        # logging.debug(f'start server with pipe {{pipe_name=}} and lock {{lock_file_name=}}')
         sys.modules['inject_server'] = server
         with mutex:
             server.serve()
@@ -79,7 +86,7 @@ except:
         f.write(traceback.format_exc())
 '''
         compile(shell_code, 's', 'exec')
-        res = injection.exec_shell_code(self.process_handle, shell_code.encode('utf-8'),auto_inject= True)
+        res = injection.exec_shell_code(self.process_handle, shell_code.encode('utf-8'), auto_inject=True)
         if self.exc_file.exists():
             self.logger.error('error occurred in injection:\n' + self.exc_file.read_text('utf-8'))
             self.exc_file.unlink(missing_ok=True)

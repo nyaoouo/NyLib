@@ -37,6 +37,8 @@ def decref(handle, pyobj):  # TODO: need impl
 
 def exec_shell_code(handle, shell_code: bytes, p_dict=None, auto_inject=False):
     # return process.remote_call(handle, get_python_base_address(handle, auto_inject) + pyfunc_offset(b'PyRun_SimpleString'), shell_code)
+    if not shell_code.endswith(b'\0'):
+        shell_code += b'\0'
     py_base = get_python_base_address(handle, auto_inject)
     need_decref = False
     if p_dict is None:
