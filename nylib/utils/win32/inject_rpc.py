@@ -63,8 +63,8 @@ def run_rpc_server_main():
         return namespace.get(res_key)
 
     server = RpcServer(pipe_name, {{"run": run_call}})
-    sys.stdout = type('_rpc_stdout', (), {{'write': lambda _, data: server.push_event('__std_out__', data)}})()
-    sys.stderr = type('_rpc_stderr', (), {{'write': lambda _, data: server.push_event('__std_err__', data)}})()
+    sys.stdout = type('_rpc_stdout', (), {{'write': lambda _, data: server.push_event('__std_out__', data), 'flush': lambda *_: None}})()
+    sys.stderr = type('_rpc_stderr', (), {{'write': lambda _, data: server.push_event('__std_err__', data), 'flush': lambda *_: None}})()
     import logging
     for handler in logging.root.handlers[:]:
         handler.stream = sys.stdout
