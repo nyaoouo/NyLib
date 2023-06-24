@@ -6,7 +6,7 @@ import sys
 import threading
 import time
 
-from nylib.utils import Mutex, wait_until
+from nylib.utils import Mutex, wait_until, BroadcastHook
 from nylib.rpc.namedpipe_pickle import RpcClient
 from nylib.utils.win32 import injection, process
 
@@ -25,31 +25,30 @@ class Handle:
         self.is_starting_server = False
         self.paths = []
 
+    def reg_std_out(self, func):
+        self.client.subscribe('__std_out__', func)
+
+    def unreg_std_out(self, func):
+        self.client.unsubscribe('__std_out__', func)
+
+    def reg_std_err(self, func):
+        self.client.subscribe('__std_err__', func)
+
+    def unreg_std_err(self, func):
+        self.client.unsubscribe('__std_err__', func)
+
     def is_active(self):
         return self.lock_file.is_lock()
 
     def is_python_load(self):
         return process.get_module_by_name(self.process_handle, injection.python_dll_name) is not None
 
-    def start_server(self, alloc_console=False):
+    def start_server(self):
         assert not self.is_active()
         # pywin32_dll_place()
         self.is_starting_server = True
         shell_code = f'''
 def run_rpc_server_main():
-    if {repr(alloc_console)}:
-        import win32console
-        import win32file
-        win32console.FreeConsole()
-        win32console.AllocConsole()
-        buf = win32console.CreateConsoleScreenBuffer(win32file.GENERIC_WRITE, win32file.FILE_SHARE_WRITE)
-        buf.SetConsoleActiveScreenBuffer()
-        sys.stdout = sys.stderr = type('PyBuf', (), {{
-            'write': lambda s: buf.WriteConsole(s),
-            'flush': lambda: None,
-        }})
-        print('Allocated console')
-    
     import threading
     import nylib.logging as ny_log
     from nylib.utils import Mutex, Counter
@@ -64,13 +63,15 @@ def run_rpc_server_main():
         return namespace.get(res_key)
 
     server = RpcServer(pipe_name, {{"run": run_call}})
+    sys.stdout = type('_rpc_stdout', (), {{'write': lambda _, data: server.push_event('__std_out__', data)}})()
+    sys.stderr = type('_rpc_stderr', (), {{'write': lambda _, data: server.push_event('__std_err__', data)}})()
+    import logging
+    for handler in logging.root.handlers[:]:
+        handler.stream = sys.stdout
     mutex = Mutex(lock_file_name)
     if not mutex.is_lock():
-        # import logging
-        # logging.debug(f'start server with pipe {{pipe_name=}} and lock {{lock_file_name=}}')
         sys.modules['inject_server'] = server
-        with mutex:
-            server.serve()
+        with mutex: server.serve()
 import traceback
 import ctypes
 try:
