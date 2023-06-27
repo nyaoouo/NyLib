@@ -161,6 +161,8 @@ class WindowManager:
         self.any_window_select = False
         self.windows = {}
         self.calls_before_draw = []
+        self.calls_after_draw = []
+        self.frame_count = 0
 
     def ensure_thread(self):
         if self.ident == -1:
@@ -235,6 +237,7 @@ class WindowManager:
             self.calls_before_draw.pop()()
         if not self.windows: return False
         glfw.poll_events()
+        self.frame_count += 1
         for title, window in list(self.windows.items()):
             if glfw.window_should_close(window.window):
                 glfw.destroy_window(window.window)
@@ -243,6 +246,8 @@ class WindowManager:
                 self.current_window = window
                 window.update()
                 self.current_window = None
+        for call in self.calls_after_draw.copy():
+            call()
         return True
 
     def run(self):

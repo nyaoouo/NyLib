@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger("Hooks")
+
+
 class ChainHook(list):
     class HookCall:
         def __init__(self, stack: list, func):
@@ -46,7 +51,11 @@ class ChainHookAsync(ChainHook):
 
 class BroadcastHook(list):
     def __call__(self, *args, **kwargs):
-        return [f(*args, **kwargs) for f in self]
+        for f in self:
+            try:
+                f(*args, **kwargs)
+            except Exception as e:
+                logger.error("Error in hook: %s", e, exc_info=e)
 
     def remove(self, __value) -> bool:
         try:
@@ -59,4 +68,8 @@ class BroadcastHook(list):
 
 class BroadcastHookAsync(BroadcastHook):
     async def __call__(self, *args, **kwargs):
-        return [await f(*args, **kwargs) for f in self]
+        for f in self:
+            try:
+                await f(*args, **kwargs)
+            except Exception as e:
+                logger.error("Error in hook: %s", e, exc_info=e)
