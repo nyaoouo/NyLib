@@ -1,3 +1,4 @@
+import ctypes
 from ctypes import windll
 
 
@@ -8,7 +9,7 @@ class WinAPIError(Exception):
         else:
             self.error_code = error_code
         if func_name:
-            message = f'Windows api error at calling {func_name}, error_code: {self.error_code:#X}'
+            message = f'Windows api error at calling {func_name}, error_code: {self.error_code:#X} ({ctypes.FormatError(self.error_code)})'
         else:
-            message = f'Windows api error, error_code: {self.error_code:#X}'
+            message = f'Windows api error, error_code: {self.error_code:#X} ({ctypes.FormatError(self.error_code)})'
         super(WinAPIError, self).__init__(message)

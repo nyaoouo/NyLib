@@ -1,5 +1,4 @@
 import ctypes
-import enum
 from ctypes import wintypes
 
 from . import structure
@@ -46,12 +45,6 @@ GetLastError.restype = wintypes.DWORD
 #: https://msdn.microsoft.com/en-us/library/windows/desktop/ms683179%28v=vs.85%29.aspx
 GetCurrentProcess = dll.GetCurrentProcess
 GetCurrentProcess.restype = wintypes.HANDLE
-
-#: Retrieves a pseudo handle for the current process.
-#:
-#: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocessid
-GetCurrentProcessId = dll.GetCurrentProcessId
-GetCurrentProcessId.restype = wintypes.DWORD
 
 #: Reads data from an area of memory in a specified process. The entire area to be read must be accessible or the operation fails.
 #:
@@ -240,76 +233,119 @@ GetModuleHandleA.argtypes = [ctypes.c_wchar_p]
 
 GetProcAddress = dll.GetProcAddress
 GetProcAddress.restype = ctypes.c_void_p
-GetProcAddress.argtypes = (ctypes.c_void_p, ctypes.c_char_p)
+GetProcAddress.argtypes = (
+    ctypes.c_void_p,  # hModule
+    ctypes.c_char_p,  # lpProcName
+)
 
 CreateRemoteThread = dll.CreateRemoteThread
 CreateRemoteThread.restype = ctypes.c_void_p
 CreateRemoteThread.argtypes = (
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.c_size_t,
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.c_ulong,
-    ctypes.c_void_p
+    ctypes.c_void_p,  # hProcess
+    ctypes.c_void_p,  # lpThreadAttributes
+    ctypes.c_size_t,  # dwStackSize
+    ctypes.c_void_p,  # lpStartAddress
+    ctypes.c_void_p,  # lpParameter
+    ctypes.c_ulong,  # dwCreationFlags
+    ctypes.c_void_p,  # lpThreadId
 )
 
 GetFullPathNameA = dll.GetFullPathNameA
 GetFullPathNameA.restype = ctypes.c_ulong
 GetFullPathNameA.argtypes = [
-    ctypes.c_char_p, ctypes.c_ulong, ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p)
+    ctypes.c_char_p,  # lpFileName
+    ctypes.c_ulong,  # nBufferLength
+    ctypes.c_char_p,  # lpBuffer
+    ctypes.POINTER(ctypes.c_char_p),  # lpFilePart
 ]
 
 WaitForSingleObject = dll.WaitForSingleObject
 WaitForSingleObject.restype = ctypes.c_ulong
 WaitForSingleObject.argtypes = [
-    ctypes.c_void_p, ctypes.c_ulong
+    ctypes.c_void_p,  # hHandle
+    ctypes.c_ulong,  # dwMilliseconds
 ]
 
 GetExitCodeThread = dll.GetExitCodeThread
 GetExitCodeThread.restype = ctypes.c_long
 GetExitCodeThread.argtypes = [
-    ctypes.c_void_p,
-    ctypes.POINTER(ctypes.c_ulong)
+    ctypes.c_void_p,  # hThread
+    ctypes.POINTER(ctypes.c_ulong),  # lpExitCode
 ]
 
 VirtualFreeEx = dll.VirtualFreeEx
 VirtualFreeEx.restype = ctypes.c_long
 VirtualFreeEx.argtypes = [
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.c_size_t,
-    ctypes.c_ulong
+    ctypes.c_void_p,  # hProcess
+    ctypes.c_void_p,  # lpAddress
+    ctypes.c_size_t,  # dwSize
+    ctypes.c_ulong,  # dwFreeType
 ]
 
 GetThreadTimes = dll.GetThreadTimes
 GetThreadTimes.restype = ctypes.c_long
 GetThreadTimes.artypes = [
-    ctypes.c_void_p,
-    ctypes.POINTER(structure.FILETIME),
-    ctypes.POINTER(structure.FILETIME),
-    ctypes.POINTER(structure.FILETIME),
-    ctypes.POINTER(structure.FILETIME)
+    ctypes.c_void_p,  # hThread
+    ctypes.POINTER(structure.FILETIME),  # lpCreationTime
+    ctypes.POINTER(structure.FILETIME),  # lpExitTime
+    ctypes.POINTER(structure.FILETIME),  # lpKernelTime
+    ctypes.POINTER(structure.FILETIME),  # lpUserTime
 ]
 
 GetModuleFileName = dll.GetModuleFileNameA
 GetModuleFileName.restype = ctypes.c_ulong
 GetModuleFileName.argtypes = [
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.c_ulong
+    ctypes.c_void_p,  # hModule
+    ctypes.c_void_p,  # lpFilename
+    ctypes.c_ulong,  # nSize
 ]
 
 DuplicateHandle = dll.DuplicateHandle
 DuplicateHandle.restype = ctypes.c_bool
 DuplicateHandle.argtypes = [
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.c_void_p,
-    ctypes.POINTER(ctypes.c_void_p),
-    ctypes.c_ulong,
-    ctypes.c_bool,
-    ctypes.c_ulong
+    ctypes.c_void_p,  # hSourceProcessHandle
+    ctypes.c_void_p,  # hSourceHandle
+    ctypes.c_void_p,  # hTargetProcessHandle
+    ctypes.POINTER(ctypes.c_void_p),  # lpTargetHandle
+    ctypes.c_ulong,  # dwDesiredAccess
+    ctypes.c_bool,  # bInheritHandle
+    ctypes.c_ulong  # dwOptions
 ]
 
 CreateFileA = dll.CreateFileA
+CreateFileA.restype = structure.c_address
+CreateFileA.argtypes = [
+    ctypes.c_char_p,  # lpFileName
+    ctypes.c_ulong,  # dwDesiredAccess
+    ctypes.c_ulong,  # dwShareMode
+    ctypes.c_void_p,  # lpSecurityAttributes
+    ctypes.c_ulong,  # dwCreationDisposition
+    ctypes.c_ulong,  # dwFlagsAndAttributes
+    ctypes.c_void_p  # hTemplateFile
+]
+
+GetProcessId = dll.GetProcessId
+GetProcessId.restype = ctypes.c_ulong
+GetProcessId.argtypes = [
+    ctypes.c_void_p,  # hProcess
+]
+
+LoadLibrary = dll.LoadLibraryA
+LoadLibrary.restype = ctypes.c_void_p
+LoadLibrary.argtypes = [
+    ctypes.c_char_p,  # lpFileName
+]
+
+DeviceIoControl = dll.DeviceIoControl
+DeviceIoControl.restype = ctypes.c_bool
+DeviceIoControl.argtypes = [
+    ctypes.c_void_p,  # hDevice
+    ctypes.c_ulong,  # dwIoControlCode
+    ctypes.c_void_p,  # lpInBuffer
+    ctypes.c_ulong,  # nInBufferSize
+    ctypes.c_void_p,  # lpOutBuffer
+    ctypes.c_ulong,  # nOutBufferSize
+    ctypes.c_void_p,  # lpBytesReturned
+    ctypes.c_void_p,  # lpOverlapped
+]
+
