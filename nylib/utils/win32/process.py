@@ -5,7 +5,7 @@ from ctypes import *
 
 from win32con import PROCESS_ALL_ACCESS
 
-from .winapi import kernel32, psapi, structure, advapi32
+from .winapi import kernel32, psapi, structure, advapi32, ntdll
 from . import exception, memory
 
 CURRENT_PROCESS_HANDLER = -1
@@ -23,6 +23,22 @@ def get_memory_basic_information_at_address(
             sizeof(mbi)
     ) == sizeof(structure.MEMORY_BASIC_INFORMATION): return mbi
     raise exception.WinAPIError(kernel32.GetLastError(), "VirtualQueryEx")
+
+
+def enum_process_ldr_data(handle):
+    pbi = structure.PROCESS_BASIC_INFORMATION()
+    status = ntdll.NtQueryInformationProcess(handle, 0, byref(pbi), sizeof(pbi), None)
+    if status != 0: raise RuntimeError(f'NtQueryInformationProcess failed: {status=:x}')
+    peb = memory.read_memory(handle, structure.PEB, pbi.PebBaseAddress)
+    ldr = memory.read_memory(handle, structure.PEB_LDR_DATA, peb.Ldr)
+    p_data = p_end = ldr.InMemoryOrderModuleList.Flink
+    offset = structure.LDR_DATA_TABLE_ENTRY.InMemoryOrderLinks.offset
+    while True:
+        data = memory.read_memory(handle, structure.LDR_DATA_TABLE_ENTRY, p_data - offset)
+        if data.DllBase:
+            yield data
+        p_data = data.InMemoryOrderLinks.Flink
+        if p_data == p_end: break
 
 
 def enum_process_module(handle):
@@ -195,6 +211,8 @@ _FLOAT_ARG = [
     b'\xF3\x0F\x10\x13',  # MOVSS xmm2, [rbx]
     b'\xF3\x0F\x10\x1B',  # MOVSS xmm3, [rbx]
 ]
+
+
 def remote_call(handle, func_ptr, *args: int | float | bytes | bool, push_stack_depth=0x28):
     if len(args) > 4:
         raise ValueError('not yet handle args more then 4')

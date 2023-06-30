@@ -546,17 +546,6 @@ class MODULEENTRY32(ctypes.Structure):
     ]
 
 
-class PROCESS_BASIC_INFORMATION(ctypes.Structure):
-    _fields_ = [
-        ('ExitStatus', ctypes.c_ulong),
-        ('PebBaseAddress', ctypes.c_void_p),
-        ('AffinityMask', ctypes.c_ulong),
-        ('BasePriority', ctypes.c_ulong),
-        ('UniqueProcessId', ctypes.c_ulong),
-        ('InheritedFromUniqueProcessId', ctypes.c_ulong),
-    ]
-
-
 class OBJECT_ATTRIBUTES(ctypes.Structure):
     _fields_ = [
         ('Length', ctypes.c_ulong),
@@ -999,3 +988,93 @@ class SCM_ACCESS(enum.IntEnum):
             | QUERY_LOCK_STATUS
             | MODIFY_BOOT_CONFIG
     )  # 0x000F003F
+
+
+class PAGE_PROTECT(enum.IntEnum):
+    EXECUTE = 0x10
+    EXECUTE_READ = 0x20
+    EXECUTE_READWRITE = 0x40
+    EXECUTE_WRITECOPY = 0x80
+    NOACCESS = 0x01
+    READONLY = 0x02
+    READWRITE = 0x04
+    WRITECOPY = 0x08
+    GUARD = 0x100
+    NOCACHE = 0x200
+    WRITECOMBINE = 0x400
+
+
+class LIST_ENTRY(ctypes.Structure):
+    _fields_ = [
+        ("Flink", ctypes.c_void_p),
+        ("Blink", ctypes.c_void_p),
+    ]
+
+
+class PEB_LDR_DATA(ctypes.Structure):
+    _fields_ = [
+        ("Length", ctypes.c_uint32),
+        ("Initialized", ctypes.c_uint8),
+        ("SsHandle", ctypes.c_void_p),
+        ("InLoadOrderModuleList", LIST_ENTRY),
+        ("InMemoryOrderModuleList", LIST_ENTRY),
+        ("InInitializationOrderModuleList", LIST_ENTRY),
+        ("EntryInProgress", ctypes.c_void_p),
+    ]
+
+
+class RTL_USER_PROCESS_PARAMETERS(ctypes.Structure):
+    _fields_ = [
+        ("Reserved1", ctypes.c_byte * 16),
+        ("Reserved2", ctypes.c_void_p * 10),
+        ("ImagePathName", UNICODE_STRING),
+        ("CommandLine", UNICODE_STRING),
+    ]
+
+
+class PEB(ctypes.Structure):
+    _fields_ = [
+        ("InheritedAddressSpace", ctypes.c_uint8),
+        ("ReadImageFileExecOptions", ctypes.c_uint8),
+        ("BeingDebugged", ctypes.c_uint8),
+        ("SpareBool", ctypes.c_uint8),
+        ("Mutant", ctypes.c_void_p),
+        ("ImageBaseAddress", ctypes.c_void_p),
+        ("Ldr", ctypes.c_void_p),
+        # ...
+    ]
+
+
+class PROCESS_BASIC_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("ExitStatus", NTSTATUS),
+        ("PebBaseAddress", ctypes.c_void_p),
+        ("AffinityMask", ctypes.c_void_p),
+        ("BasePriority", ctypes.c_void_p),
+        ("UniqueProcessId", ctypes.c_void_p),
+        ("InheritedFromUniqueProcessId", ctypes.c_void_p)
+    ]
+
+
+class LDR_DATA_TABLE_ENTRY(LIST_ENTRY):
+    _fields_ = [
+        ("InLoadOrderLinks", LIST_ENTRY),
+        ("InMemoryOrderLinks", LIST_ENTRY),
+        ("InInitializationOrderLinks", LIST_ENTRY),
+        ("DllBase", ctypes.c_void_p),
+        ("EntryPoint", ctypes.c_void_p),
+        ("SizeOfImage", ctypes.c_uint32),
+        ("FullDllName", UNICODE_STRING),
+        ("BaseDllName", UNICODE_STRING),
+        ("Flags", ctypes.c_uint32),
+        ("LoadCount", ctypes.c_uint16),
+        ("TlsIndex", ctypes.c_uint16),
+        ("HashLinks", LIST_ENTRY),
+        ("SectionPointer", ctypes.c_void_p),
+        ("CheckSum", ctypes.c_uint32),
+        ("TimeDateStamp", ctypes.c_uint32),
+        ("LoadedImports", ctypes.c_void_p),
+        ("EntryPointActivationContext", ctypes.c_void_p),
+        ("PatchInformation", ctypes.c_void_p),
+
+    ]

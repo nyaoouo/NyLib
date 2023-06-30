@@ -1,3 +1,4 @@
+import ctypes
 import functools
 import struct
 import threading
@@ -168,3 +169,8 @@ def wrap_error(cb, exc_type=Exception, default_rtn=None):
         return wrapper
 
     return dec
+
+
+mv_from_mem = ctypes.pythonapi.PyMemoryView_FromMemory
+mv_from_mem.argtypes = (ctypes.c_void_p, ctypes.c_ssize_t, ctypes.c_int)
+mv_from_mem.restype = ctypes.py_object
