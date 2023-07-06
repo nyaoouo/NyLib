@@ -2,12 +2,13 @@
 # [xx:yy] 单字节从 xx 到 yy
 # [xx|yy|zz] 单字节 xx 或 yy 或 zz
 # ? ? ? ? 视作变量（默认不储存）
+# ^ ^ ^ ^ 视作字串（默认储存）
 # * * * * 视作跳转（默认储存）
 # ?{n} / *{n} 视作匹配n次
 # ?{n:m} / *{n:m} 视作匹配n-m次
 # (xx xx xx xx) 不存储的分组
 # <xx xx xx xx> 储存的分组
-# <* * * *: yy yy yy yy> 对分组数据二级匹配，仅适用于跳转
+# <* * * *: yy yy yy yy> 对分组数据二级匹配
 # <* * * *: yy yy yy yy <* * * *:zz zz zz zz>> 对分组数据多级匹配，仅适用于跳转
 import io
 import re
@@ -16,7 +17,8 @@ from . import pefile
 from .utils.win32 import memory
 
 fl_is_ref = 1 << 0
-fl_store = 1 << 1
+fl_is_byes = 1 << 1
+fl_store = 1 << 2
 
 hex_chars = set(b'0123456789abcdefABCDEF')
 dec_chars = set(b'0123456789')
@@ -59,7 +61,7 @@ def take_byte(pattern: str, i: int, regex_pattern: bytearray):
 
 def _take_unk(pattern: str, i: int):
     start_chr = pattern[i]
-    assert start_chr in ('?', '*')
+    assert start_chr in ('?', '*', '^')
     if i + 1 < len(pattern) and pattern[i + 1] == start_chr:
         i += 1
     return start_chr, i + 1
@@ -104,7 +106,7 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
                             i += 1
                             break
                         case '|':
-                            i = take_byte(pattern, i+1, regex_pattern)
+                            i = take_byte(pattern, i + 1, regex_pattern)
                         case ':':
                             regex_pattern.append(45)  # -
                             i = take_byte(pattern, i + 1, regex_pattern)
@@ -117,6 +119,8 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
                 unk_type, i = take_unk(pattern, i + 1, regex_pattern)
                 if unk_type == '*':
                     base_flag |= fl_is_ref
+                elif unk_type == '^':
+                    base_flag |= fl_is_byes
                 sub_pattern = None
                 while True:
                     match pattern[i]:
@@ -142,6 +146,8 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
                 unk_type, i = take_unk(pattern, i + 1, regex_pattern)
                 if unk_type == '*':
                     base_flag |= fl_is_ref
+                elif unk_type == '^':
+                    base_flag |= fl_is_byes
                 sub_pattern = None
                 while True:
                     match pattern[i]:
@@ -161,11 +167,18 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
                             raise ValueError(f'Invalid character {c} in pattern {pattern!r} at {i}')
                 group_flags.append(base_flag)
                 sub_matches.append(sub_pattern)
-            case '?' | '*' as c:
+            case '?' | '*' | '^' as c:
                 regex_pattern.append(40)
                 unk_type, i = take_unk(pattern, i, regex_pattern)
                 regex_pattern.append(41)
-                group_flags.append(0 if c == '?' else fl_is_ref | fl_store)
+                if c == '?':
+                    group_flags.append(0)
+                elif c == '*':
+                    group_flags.append(fl_is_ref | fl_store)
+                elif c == '^':
+                    group_flags.append(fl_is_byes | fl_store)
+                else:
+                    raise ValueError(f'Invalid character {c} in pattern {pattern!r} at {i}')
                 sub_matches.append(None)
             case c if ord(c) in hex_chars:
                 i = take_byte(pattern, i, regex_pattern)
@@ -173,7 +186,7 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
             case c if c == ret_at:
                 break
             case c:
-                fmt_pattern = pattern[:i]+'_' + pattern[i] + '_' + pattern[i + 1:]
+                fmt_pattern = pattern[:i] + '_' + pattern[i] + '_' + pattern[i + 1:]
                 raise ValueError(f'Invalid character {c} in pattern {fmt_pattern!r} at {i} (ret_at={ret_at})')
     try:
         regex = re.compile(bytes(regex_pattern))
@@ -198,27 +211,34 @@ class Pattern:
             if sub is not None:
                 self.res_is_ref.extend(sub.res_is_ref)
 
-    def finditer(self, _data: bytes | bytearray | memoryview):
+    def finditer(self, _data: bytes | bytearray | memoryview, ref_base=0):
         data = _data if isinstance(_data, memoryview) else memoryview(_data)
         for match in self.regex.finditer(data):
             res = []
-            if self._parse_match(data, match, res):
+            if self._parse_match(data, match, res, ref_base):
                 yield match.start(0), res
 
-    def _parse_match(self, data: memoryview, match: re.Match, res: list):
+    def _parse_match(self, data: memoryview, match: re.Match, res: list, ref_base=0):
         for i, (sub_match, flag) in enumerate(zip(self.sub_matches, self.group_flags)):
-            val = int.from_bytes(match.group(i + 1), 'little', signed=True)
-            if flag & fl_is_ref:
-                val += match.end(i + 1)
-            if flag & fl_store:
-                res.append(val)
-            if sub_match is not None and not sub_match._match(data, val, res):
-                return False
+            if flag & fl_is_byes:
+                res.append(match.group(i + 1))
+            else:
+                val = int.from_bytes(match.group(i + 1), 'little', signed=True)
+                if flag & fl_is_ref:
+                    val += match.end(i + 1)
+                if flag & fl_store:
+                    res.append(val)
+                if sub_match is not None:
+                    start = val if flag & fl_is_ref else val - ref_base
+                    if start < 0 or start >= len(data):
+                        return False
+                    if not sub_match._match(data,start , res, ref_base):
+                        return False
         return True
 
-    def _match(self, _data: memoryview, start_at: int, res: list):
+    def _match(self, _data: memoryview, start_at: int, res: list, ref_base=0):
         if not (match := self.regex.match(_data, start_at)): return False
-        return self._parse_match(_data, match, res)
+        return self._parse_match(_data, match, res, ref_base)
 
     def fmt(self, ind: str | int = ' ', _ind=0):
         if isinstance(ind, int): ind = ' ' * ind
