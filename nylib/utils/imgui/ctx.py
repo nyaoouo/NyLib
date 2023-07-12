@@ -109,6 +109,45 @@ class ItemWidth:
         imgui.pop_item_width()
 
 
+class TreeNodeExit(BaseException): pass
+
+
+class treenode_state:
+    def __init__(self, state):
+        self.state = state
+
+    def __bool__(self):
+        return self.state
+
+    def __call__(self, call=None):
+        if self.state:
+            return call() if call else None
+        else:
+            raise TreeNodeExit
+
+    def __enter__(self):
+        if not self.state:
+            raise TreeNodeExit
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+
+class TreeNode:
+    def __init__(self, label, flags=0):
+        self.label = label
+        self.flags = flags
+        self._is_open = []
+
+    def __enter__(self):
+        self._is_open.append(res := imgui.tree_node(self.label, self.flags))
+        return treenode_state(res)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._is_open.pop(): imgui.tree_pop()
+        if exc_type is TreeNodeExit: return True
+
+
 class CtxGroup:
     def __init__(self, *ctx):
         self.ctx = ctx
