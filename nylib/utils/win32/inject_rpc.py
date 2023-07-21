@@ -76,9 +76,7 @@ import traceback
 import ctypes
 try:
     import sys
-    for _p in {repr(sys.path + self.paths)}:
-        if _p not in sys.path:
-            sys.path.append(_p)
+    sys.path = {repr(sys.path + self.paths)} + sys.path
     run_rpc_server_main()
 except:
     # ctypes.windll.user32.MessageBoxW(0, 'error:\\n'+traceback.format_exc() ,'error' , 0x40010)

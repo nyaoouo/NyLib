@@ -40,23 +40,44 @@ def get_prime_by_max(_max):
         s_num -= 1
 
 
+class SimpRsa:
+    def __init__(self, n=0, e=0, d=0):
+        self.n, self.e, self.d = n, e, d
+        self.default_size = (n.bit_length() + 7) // 8
+
+    def encrypt(self, v: int | bytes):
+        assert v < self.n, f'v={v:#x}, n={self.n:#x}'
+        return pow(v, self.e, self.n)
+
+    def decrypt(self, v: int | bytes):
+        assert v < self.n, f'v={v:#x}, n={self.n:#x}'
+        return pow(v, self.d, self.n)
+
+    def encrypt_bytes(self, v: bytes, to_size=0):
+        return self.encrypt(int.from_bytes(v, 'little')).to_bytes(to_size or self.default_size, 'little')
+
+    def decrypt_bytes(self, v: bytes, to_size=0):
+        return self.decrypt(int.from_bytes(v, 'little')).to_bytes(to_size or self.default_size, 'little')
+
+
 def get_prime(bit_size):
     return get_prime_by_max(1 << bit_size)
 
 
 def _rsa_test():
-    p1, p2 = get_prime(1024), get_prime(1024)
+    p1, p2 = get_prime(64), get_prime(64)
     n = p1 * p2
     o = (p1 - 1) * (p2 - 1)
     e = get_prime_by_max(o)
     d = pow(e, -1, o)
-    enc = lambda m: pow(m, e, n)
-    dec = lambda m: pow(m, d, n)
+    test_rsa = SimpRsa(n, e, d)
     print(f'n={n:#x}')
     print(f'e={e:#x}')
     print(f'd={d:#x}')
-    print(hex(encr := enc(9)))
-    print(hex(dec(encr)))
+    print(hex(encr := test_rsa.encrypt(9)))
+    print(hex(test_rsa.decrypt(encr)))
+    print((encr := test_rsa.encrypt_bytes(b'test')).hex(' '))
+    print(test_rsa.decrypt_bytes(encr))
 
-
-_rsa_test()
+if __name__ == '__main__':
+    _rsa_test()
