@@ -80,7 +80,6 @@ try:
     run_rpc_server_main()
 except:
     # ctypes.windll.user32.MessageBoxW(0, 'error:\\n'+traceback.format_exc() ,'error' , 0x40010)
-    logging.critical('error occurred in injection:\\n'+traceback.format_exc())
     with open({repr(str(self.exc_file))},'w',encoding='utf-8') as f:
         f.write(traceback.format_exc())
 '''
