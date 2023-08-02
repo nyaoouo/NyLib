@@ -159,3 +159,25 @@ class CtxGroup:
     def __exit__(self, exc_type, exc_value, traceback):
         for c in reversed(self.ctx):
             c.__exit__(exc_type, exc_value, traceback)
+
+
+class Child:
+    def __init__(self, id, width, height, border=False, flags=0):
+        self.args = (id, width, height, border, flags)
+
+    def __enter__(self):
+        return imgui.begin_child(*self.args)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        imgui.end_child()
+
+
+class PushCursor:
+    def __init__(self):
+        self.cursor = imgui.get_cursor_pos()
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        imgui.set_cursor_pos(self.cursor)
