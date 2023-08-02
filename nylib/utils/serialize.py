@@ -1,6 +1,7 @@
 import ctypes
 import dataclasses
 import functools
+import itertools
 
 
 def struct_to_dict(data, show_us=False):
@@ -56,8 +57,12 @@ def serialize_data(data, show_us=False):
             if show_us or not is_us(k)
         }
     if dataclasses.is_dataclass(data):
+        t = data.__class__
+        if (pf := t.__dict__.get('_properties_field_')) is None:
+            setattr(data.__class__, '_properties_field_', pf := [k for k in dir(t) if isinstance(getattr(t, k), (property, functools.cached_property))])
         return {
-            k.name: serialize_data(getattr(data, k.name))
-            for k in dataclasses.fields(data)
+            k: serialize_data(getattr(data, k))
+            for k in itertools.chain((_k.name for _k in dataclasses.fields(data)), pf)
+            if show_us or not k.startswith('_')
         }
     return data
