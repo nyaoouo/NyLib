@@ -192,7 +192,7 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
         regex = re.compile(bytes(regex_pattern))
     except re.error as e:
         raise ValueError(f'{e}: ({pattern!r}, {_i}, {ret_at!r}) -> {bytes(regex_pattern)}')
-    return Pattern(regex, sub_matches, group_flags), i
+    return Pattern(regex, sub_matches, group_flags, pattern), i
 
 
 def compile_pattern(pattern: str):
@@ -200,10 +200,11 @@ def compile_pattern(pattern: str):
 
 
 class Pattern:
-    def __init__(self, regex: re.Pattern, sub_matches: 'typing.List[None | Pattern]', group_flags):
+    def __init__(self, regex: re.Pattern, sub_matches: 'typing.List[None | Pattern]', group_flags, pattern: str):
         self.regex = regex
         self.sub_matches = sub_matches
         self.group_flags = group_flags
+        self.pattern = pattern
         self.res_is_ref = []
         for i, (sub, flag) in enumerate(zip(sub_matches, group_flags)):
             if flag & fl_store:
@@ -232,7 +233,7 @@ class Pattern:
                     start = val if flag & fl_is_ref else val - ref_base
                     if start < 0 or start >= len(data):
                         return False
-                    if not sub_match._match(data,start , res, ref_base):
+                    if not sub_match._match(data, start, res, ref_base):
                         return False
         return True
 
