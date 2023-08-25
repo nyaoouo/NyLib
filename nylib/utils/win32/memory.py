@@ -237,6 +237,7 @@ rm = read_memory
 wm = write_memory
 r_st = read_string
 w_st = write_string
+r_c = read_bytes_zero_trim
 
 
 class RemoteMemory:
