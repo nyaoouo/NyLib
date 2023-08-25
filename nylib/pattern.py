@@ -1,5 +1,7 @@
 import re
 
+from nylib import pefile
+
 
 def wild_card(count: int):
     if not count:
@@ -53,7 +55,7 @@ special_chars_map = {i for i in b'()[]{}?*+-|^$\\.&~# \t\n\r\v\f'}
 
 class StaticPatternSearcher:
     def __init__(self, pe, base_address=0):
-        self.pe = pe
+        self.pe = pe if isinstance(pe, pefile.PE) else pefile.PE(pe, fast_load=True)
         self.text_sections = [sect for sect in self.pe.sections if sect.Name.rstrip(b'\0') == b'.text']
         self.section_datas = [sect.get_data() for sect in self.text_sections]
         self.section_virtual_addresses = [sect.VirtualAddress for sect in self.text_sections]

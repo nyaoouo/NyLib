@@ -189,7 +189,7 @@ def _compile_pattern(pattern: str, i=0, ret_at=None):
                 fmt_pattern = pattern[:i] + '_' + pattern[i] + '_' + pattern[i + 1:]
                 raise ValueError(f'Invalid character {c} in pattern {fmt_pattern!r} at {i} (ret_at={ret_at})')
     try:
-        regex = re.compile(bytes(regex_pattern))
+        regex = re.compile(bytes(regex_pattern), re.DOTALL)
     except re.error as e:
         raise ValueError(f'{e}: ({pattern!r}, {_i}, {ret_at!r}) -> {bytes(regex_pattern)}')
     return Pattern(regex, sub_matches, group_flags, pattern), i
