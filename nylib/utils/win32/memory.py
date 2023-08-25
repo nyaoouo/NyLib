@@ -1,4 +1,5 @@
 import ctypes
+import logging
 from ctypes import *
 from ctypes.wintypes import *
 from typing import TypeVar, Type, Callable
@@ -138,29 +139,52 @@ def write_float(handle, address: int, value: float | int) -> float:
     return write_memory(handle, address, c_float(value)).value
 
 
-def read_string(handle, address: int, max_length: int = 255, encoding='utf-8') -> str | bytearray:
+def read_bytes_zero_trim_unk_size(handle, address: int, chunk_size=0x100) -> bytearray:
+    max_addr = memory_region_end(handle, address)
+    buf = bytearray()
+    while address < max_addr:
+        read_size = min(chunk_size, max_addr - address)
+        _buf = read_bytes(handle, address, read_size)
+        if (sep := _buf.find(b'\0')) >= 0:
+            buf.extend(_buf[:sep])
+            break
+        buf.extend(_buf)
+        address += read_size
+    return buf
+
+
+def read_bytes_zero_trim(handle, address: int, max_length: int = None) -> bytearray:
+    if max_length is None:
+        return read_bytes_zero_trim_unk_size(handle, address)
     res = read_bytes(handle, address, max_length)
-    if encoding:
-        return res.split(b'\0')[0].decode(encoding, 'ignore')
+    if (sep := res.find(b'\0')) >= 0:
+        return res[:sep]
     return res
+
+
+def memory_region_end(handle, address):
+    if kernel32.VirtualQueryEx(
+            handle, address,
+            ctypes.byref(mbi := structure.MEMORY_BASIC_INFORMATION()),
+            (size := ctypes.sizeof(structure.MEMORY_BASIC_INFORMATION)),
+    ) == size:
+        return mbi.BaseAddress + mbi.RegionSize
+    return 0
+
+
+def read_string(handle, address: int, max_length: int = None, encoding='utf-8') -> str:
+    if encoding is None:
+        import inspect
+        s = inspect.stack()[1]
+        logging.warning(f'encoding should not be None, to get z_trim bytes use read_bytes_zero_trim, calling from {s.filename}:{s.lineno}')
+        return read_bytes_zero_trim(handle, address, max_length)
+    return read_bytes_zero_trim(handle, address, max_length).decode(encoding, 'ignore')
 
 
 def write_string(handle, address: int, value: str | bytearray | bytes) -> bytearray:
     if isinstance(value, str): value = value.encode(structure.DEFAULT_CODING)
     if isinstance(value, bytes): value = bytearray(value)
     return write_bytes(handle, address, value)
-
-
-def read_string_safe(handle, address: int, max_length: int = 255, encoding='utf-8') -> str:
-    data = bytearray()
-    for i in range(max_length):
-        try:
-            new_byte = read_ubyte(handle, address + i)
-        except WinAPIError:
-            break
-        if not new_byte: break
-        data.append(new_byte)
-    return data.decode(encoding)
 
 
 r_ui8 = read_uint8 = read_num_func(8, False)
@@ -213,7 +237,6 @@ rm = read_memory
 wm = write_memory
 r_st = read_string
 w_st = write_string
-r_sts = read_string_safe
 
 
 class RemoteMemory:
