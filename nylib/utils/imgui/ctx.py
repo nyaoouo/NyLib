@@ -134,17 +134,22 @@ class treenode_state:
 
 
 class TreeNode:
-    def __init__(self, label, flags=0):
+    def __init__(self, label, flags=0, push_id=False):
         self.label = label
         self.flags = flags
+        self.push_id = push_id
         self._is_open = []
 
     def __enter__(self):
         self._is_open.append(res := imgui.tree_node(self.label, self.flags))
+        if self.push_id and res: imgui.push_id('tn_' + self.label)
         return treenode_state(res)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._is_open.pop(): imgui.tree_pop()
+        if self._is_open.pop():
+            if self.push_id:
+                imgui.pop_id()
+            imgui.tree_pop()
         if exc_type is TreeNodeExit: return True
 
 
