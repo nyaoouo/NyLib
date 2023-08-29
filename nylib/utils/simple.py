@@ -1,5 +1,6 @@
 import ctypes
 import functools
+import inspect
 import struct
 import threading
 import pathlib
@@ -174,3 +175,23 @@ def wrap_error(cb, exc_type=Exception, default_rtn=None):
 mv_from_mem = ctypes.pythonapi.PyMemoryView_FromMemory
 mv_from_mem.argtypes = (ctypes.c_void_p, ctypes.c_ssize_t, ctypes.c_int)
 mv_from_mem.restype = ctypes.py_object
+
+
+def callable_arg_count(func):
+    return len(inspect.signature(func).parameters)
+
+
+class LazyClassAttr:
+    def __init__(self, getter):
+        self.getter = getter
+        self.owner = None
+        self.name = None
+
+    def __set_name__(self, owner, name):
+        self.name = name
+        self.owner = owner
+
+    def __get__(self, instance, owner):
+        call_arg = (instance, owner)[:callable_arg_count(self.getter)]
+        setattr(self.owner, self.name, res := self.getter(*call_arg))
+        return res
