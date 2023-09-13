@@ -57,9 +57,8 @@ def run_rpc_server_main():
     res_id_counter = Counter()
     pipe_name = {repr(self.pipe_name)}
     lock_file_name = {repr(str(self.lock_file.name))}
-    
-    def run_call(code, args, res_key='res'):
-        exec(code, namespace := {{'inject_server': server, 'args': args}})
+    def run_call(code, args, res_key='res', filename="<rpc>"):
+        exec(compile(code, filename, 'exec'), namespace := {{'inject_server': server, 'args': args}})
         return namespace.get(res_key)
 
     server = RpcServer(pipe_name, {{"run": run_call}})
@@ -114,9 +113,9 @@ if {p} not in sys.path:
             self.paths.append(str(path))
         return self
 
-    def run(self, code, *args, res_key='res'):
+    def run(self, code, *args, res_key='res', filename="<rpc>"):
         self.wait_inject()
-        return self.client.rpc.run(code, args, res_key)
+        return self.client.rpc.run(code, args, res_key, filename)
 
 
 def pywin32_dll_place():
