@@ -2,6 +2,8 @@ import threading
 import typing
 import ctypes
 
+_T = typing.TypeVar('_T')
+
 
 def terminate_thread(t: threading.Thread, exc_type=SystemExit):
     if not t.is_alive(): return
@@ -13,14 +15,14 @@ def terminate_thread(t: threading.Thread, exc_type=SystemExit):
         raise SystemError("PyThreadState_SetAsyncExc failed")
 
 
-class ResEvent(threading.Event):
+class ResEvent(threading.Event, typing.Generic[_T]):
     def __init__(self):
         super().__init__()
         self.res = None
         self.is_exc = False
         self.is_waiting = False
 
-    def set(self, data=None) -> None:
+    def set(self, data: _T = None) -> None:
         assert not self.is_set()
         self.res = data
         self.is_exc = False
@@ -32,7 +34,7 @@ class ResEvent(threading.Event):
         self.is_exc = True
         super().set()
 
-    def wait(self, timeout: float | None = None) -> typing.Any:
+    def wait(self, timeout: float | None = None) -> _T:
         self.is_waiting = True
         try:
             if super().wait(timeout):
@@ -46,20 +48,20 @@ class ResEvent(threading.Event):
             self.is_waiting = False
 
 
-class ResEventList:
-    queue: typing.List[ResEvent]
+class ResEventList(typing.Generic[_T]):
+    queue: typing.List[ResEvent[_T]]
 
     def __init__(self):
         self.queue = [ResEvent()]
         self.lock = threading.Lock()
 
-    def put(self, data):
+    def put(self, data: _T):
         with self.lock:
             if not self.queue or self.queue[-1].is_set():
                 self.queue.append(ResEvent())
             self.queue[-1].set(data)
 
-    def get(self):
+    def get(self) -> _T:
         with self.lock:
             if not self.queue:
                 self.queue.append(ResEvent())
