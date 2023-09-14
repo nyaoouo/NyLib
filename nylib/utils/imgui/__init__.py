@@ -43,3 +43,35 @@ class floating_text:
                 pos_y -= win_height
             imgui.set_window_position(pos_x, pos_y)
             imgui.text(text)
+
+
+def select(name, items, selected, placeholder='Select...'):
+    with ImguiId(name):
+        display_text = placeholder
+        _items = []
+        if isinstance(items, list):
+            for i in items:
+                _items.append((str(i), i))
+                if i == selected:
+                    display_text = str(i)
+        elif isinstance(items, dict):
+            for k, v in items.items():
+                _items.append((k, v))
+                if v == selected:
+                    display_text = k
+        else:
+            raise TypeError(f"items must be list or dict, not {type(items)}")
+        if imgui.button(display_text):
+            imgui.open_popup("select")
+        changed = False
+        if imgui.begin_popup("select"):
+            imgui.push_id('items')
+            for k, v in _items:
+                if imgui.selectable(k)[1]:
+                    selected = v
+                    changed = True
+            imgui.pop_id()
+            imgui.end_popup()
+        imgui.same_line()
+        imgui.text(name)
+    return changed, selected
