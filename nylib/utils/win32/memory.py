@@ -262,7 +262,8 @@ class RemoteMemory:
         return self.alloc()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self.free()
+        self.free()
+        return
 
     @property
     def value(self):
