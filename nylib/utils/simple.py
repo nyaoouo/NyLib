@@ -181,8 +181,8 @@ def callable_arg_count(func):
     return len(inspect.signature(func).parameters)
 
 
-class LazyClassAttr:
-    def __init__(self, getter):
+class LazyClassAttr(typing.Generic[_T]):
+    def __init__(self, getter: typing.Callable[..., _T]):
         self.getter = getter
         self.owner = None
         self.name = None
@@ -191,7 +191,7 @@ class LazyClassAttr:
         self.name = name
         self.owner = owner
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance, owner) -> _T:
         call_arg = (instance, owner)[:callable_arg_count(self.getter)]
         setattr(self.owner, self.name, res := self.getter(*call_arg))
         return res
