@@ -58,7 +58,7 @@ def run_rpc_server_main():
     pipe_name = {repr(self.pipe_name)}
     lock_file_name = {repr(str(self.lock_file.name))}
     def run_call(code, args, res_key='res', filename="<rpc>"):
-        exec(compile(code, filename, 'exec'), namespace := {{'inject_server': server, 'args': args}})
+        exec(compile(code, filename, 'exec'), namespace := {{'inject_server': server, 'args': args, '__file__': filename}})
         return namespace.get(res_key)
 
     server = RpcServer(pipe_name, {{"run": run_call}})
