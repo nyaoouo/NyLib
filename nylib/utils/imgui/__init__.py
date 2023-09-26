@@ -72,6 +72,7 @@ def select(name, items, selected, placeholder='Select...'):
                     changed = True
             imgui.pop_id()
             imgui.end_popup()
-        imgui.same_line()
-        imgui.text(name)
+        if text:=name.split('##', 1)[0]:
+            imgui.same_line()
+            imgui.text(text)
     return changed, selected
