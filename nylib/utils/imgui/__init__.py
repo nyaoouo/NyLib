@@ -49,11 +49,13 @@ def select(name, items, selected, placeholder='Select...'):
     with ImguiId(name):
         display_text = placeholder
         _items = []
-        if isinstance(items, list):
+        if isinstance(items, (tuple, list)):
             for i in items:
-                _items.append((str(i), i))
-                if i == selected:
-                    display_text = str(i)
+                if (isinstance(i, (tuple, list)) and len(i) == 2 and isinstance(i[0], str)):
+                    i = (str(i), i)
+                if i[1] == selected:
+                    display_text = i[0]
+                _items.append(i)
         elif isinstance(items, dict):
             for k, v in items.items():
                 _items.append((k, v))
@@ -72,7 +74,7 @@ def select(name, items, selected, placeholder='Select...'):
                     changed = True
             imgui.pop_id()
             imgui.end_popup()
-        if text:=name.split('##', 1)[0]:
+        if text := name.split('##', 1)[0]:
             imgui.same_line()
             imgui.text(text)
     return changed, selected
