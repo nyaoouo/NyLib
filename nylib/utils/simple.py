@@ -1,4 +1,5 @@
 import collections
+import contextlib
 import ctypes
 import functools
 import inspect
@@ -63,7 +64,8 @@ def safe(func: typing.Callable[[...], _T], *args, _handle=BaseException, _defaul
         return _default
 
 
-def safe_lazy(func: typing.Callable[[...], _T], *args, _handle=BaseException, _default: _T2 = None, **kwargs) -> _T | _T2:
+def safe_lazy(func: typing.Callable[[...], _T], *args, _handle=BaseException, _default: _T2 = None,
+              **kwargs) -> _T | _T2:
     try:
         return func(*args, **kwargs)
     except _handle:
@@ -150,11 +152,13 @@ def wait_until(func, timeout=-1, interval=0.1, *args, **kwargs):
         time.sleep(interval)
 
 
-def named_tuple_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes, offset: int = 0) -> _T:
+def named_tuple_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes,
+                          offset: int = 0) -> _T:
     return t._make(s.unpack_from(buffer, offset))
 
 
-def dataclass_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes, offset: int = 0) -> _T:
+def dataclass_by_struct(t: typing.Type[_T], s: struct.Struct, buffer: bytearray | memoryview | bytes,
+                        offset: int = 0) -> _T:
     return t(*s.unpack_from(buffer, offset))
 
 
@@ -199,19 +203,64 @@ class LazyClassAttr(typing.Generic[_T]):
 
 
 class LRU(collections.OrderedDict):
-    'Limit size, evicting the least recently looked-up key when full'
-
-    def __init__(self, maxsize=128, *args, **kwds):
-        self.maxsize = maxsize
+    def __init__(self, *args, _maxsize=128, _getter=None, _validate=None, _threadsafe=False, **kwds):
+        self.__maxsize = _maxsize
+        self.__validate = _validate
+        self.__getter = _getter
+        self.__lock = (threading.Lock if _threadsafe else contextlib.nullcontext)()
         super().__init__(*args, **kwds)
 
-    def __getitem__(self, key):
-        value = super().__getitem__(key)
-        self.move_to_end(key)
-        return value
+    def __missing__(self, key):
+        if self.__validate:
+            self[key] = value = self.__validate(key)
+            return value
+        raise KeyError(key)
 
-    def __setitem__(self, key, value):
+    def __validate__(self, key, value):
+        if self.__validate:
+            return self.__validate(key, value)
+        return True
+
+    def __getitem__(self, key):
+        with self.__lock:
+            value = super().__getitem__(key)
+            if self.__validate__(key, value):
+                self.move_to_end(key)
+                return value
+            else:
+                del self[key]
+                value = self.__missing__(key)
+                self.__setitem(key, value)
+                return value
+
+    @property
+    def maxsize(self):
+        return self.__maxsize
+
+    @maxsize.setter
+    def maxsize(self, value):
+        with self.__lock:
+            if value < self.__maxsize:
+                for k, _ in list(zip(self.keys(), range(value))):
+                    del self[k]
+            self.__maxsize = value
+
+    @property
+    def thread_safe(self):
+        return not isinstance(self.__lock, contextlib.nullcontext)
+
+    @thread_safe.setter
+    def thread_safe(self, value):
+        value = bool(value)
+        if value != self.thread_safe:
+            self.__lock = (threading.Lock if value else contextlib.nullcontext)()
+
+    def __setitem(self, key, value):
         super().__setitem__(key, value)
-        if len(self) > self.maxsize:
+        if len(self) > self.__maxsize:
             oldest = next(iter(self))
             del self[oldest]
+
+    def __setitem__(self, key, value):
+        with self.__lock:
+            self.__setitem(key, value)
