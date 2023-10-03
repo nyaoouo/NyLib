@@ -211,8 +211,8 @@ class LRU(collections.OrderedDict):
         super().__init__(*args, **kwds)
 
     def __missing__(self, key):
-        if self.__validate:
-            self[key] = value = self.__validate(key)
+        if self.__getter:
+            self.__setitem(key, value := self.__getter(key))
             return value
         raise KeyError(key)
 
