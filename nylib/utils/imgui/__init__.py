@@ -78,3 +78,11 @@ def select(name, items, selected, placeholder='Select...'):
             imgui.same_line()
             imgui.text(text)
     return changed, selected
+
+
+def dumb_button_style():
+    color_normal = imgui.get_style().colors[imgui.COLOR_BUTTON]
+    return CtxGroup(
+        StyleColor(imgui.COLOR_BUTTON_HOVERED, *color_normal),
+        StyleColor(imgui.COLOR_BUTTON_ACTIVE, *color_normal),
+    )
