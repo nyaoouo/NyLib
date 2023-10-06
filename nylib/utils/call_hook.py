@@ -55,7 +55,7 @@ class BroadcastHook(list):
             try:
                 f(*args, **kwargs)
             except Exception as e:
-                logger.error("Error in hook: %s", e, exc_info=e)
+                logger.error(f"Error in hook: {e}", exc_info=e)
 
     def remove(self, __value) -> bool:
         try:
@@ -72,4 +72,4 @@ class BroadcastHookAsync(BroadcastHook):
             try:
                 await f(*args, **kwargs)
             except Exception as e:
-                logger.error("Error in hook: %s", e, exc_info=e)
+                logger.error(f"Error in hook: {e}", exc_info=e)
