@@ -202,8 +202,8 @@ class LazyClassAttr(typing.Generic[_T]):
         return res
 
 
-class LRU(collections.OrderedDict):
-    def __init__(self, *args, _maxsize=128, _getter=None, _validate=None, _threadsafe=False, **kwds):
+class LRU(collections.OrderedDict[_T, _T2]):
+    def __init__(self, *args, _maxsize=128, _getter: typing.Callable[[_T], _T2] = None, _validate: typing.Callable[[_T, _T2], bool] = None, _threadsafe=False, **kwds):
         self.__maxsize = _maxsize
         self.__validate = _validate
         self.__getter = _getter
@@ -221,7 +221,10 @@ class LRU(collections.OrderedDict):
             return self.__validate(key, value)
         return True
 
-    def __getitem__(self, key):
+    def __call__(self, key):
+        return self.__getitem__(key)
+
+    def __getitem__(self, key) -> _T2:
         with self.__lock:
             value = super().__getitem__(key)
             if self.__validate__(key, value):
