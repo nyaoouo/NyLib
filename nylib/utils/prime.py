@@ -116,12 +116,10 @@ class SimpleChipper:
         res = io.BytesIO()
         while data := src_.read(self.size):
             res.write(pow(int.from_bytes(data, 'little'), self.d, self.n).to_bytes(self.check_size, 'little'))
-        print(res.getvalue().hex(' '))
         return self.unpad(res.getvalue())
 
     def enc(self, src: bytes):
         if self.e == -1: raise ValueError('public key is not available')
-        print(self.pad(src).hex(' '))
         src_ = io.BytesIO(self.pad(src))
         res = io.BytesIO()
         while data := src_.read(self.check_size):
