@@ -92,7 +92,7 @@ class SimpleChipper:
         self.e = e
         self.d = d
         self.size = (n.bit_length() + 7) // 8
-
+        self.check_size = self.size - 1
         if self.size >> 32 != 0:
             raise ValueError('n is too large')
         elif self.size >> 16 != 0:
@@ -103,8 +103,8 @@ class SimpleChipper:
             self.p_size = 1
 
     def pad(self, src: bytes):
-        to_pad = self.size - len(src) % self.size
-        if to_pad < self.p_size: to_pad += self.size
+        to_pad = self.check_size - len(src) % self.check_size
+        if to_pad < self.p_size: to_pad += self.check_size
         return src + randbytes(to_pad - self.p_size) + to_pad.to_bytes(self.p_size, 'little')
 
     def unpad(self, src: bytes):
@@ -115,16 +115,17 @@ class SimpleChipper:
         src_ = io.BytesIO(src)
         res = io.BytesIO()
         while data := src_.read(self.size):
-            res.write(pow(int.from_bytes(data, 'little'), self.d, self.n).to_bytes(self.size - 1, 'little'))
+            res.write(pow(int.from_bytes(data, 'little'), self.d, self.n).to_bytes(self.check_size, 'little'))
+        print(res.getvalue().hex(' '))
         return self.unpad(res.getvalue())
 
     def enc(self, src: bytes):
         if self.e == -1: raise ValueError('public key is not available')
+        print(self.pad(src).hex(' '))
         src_ = io.BytesIO(self.pad(src))
         res = io.BytesIO()
-        while data := src_.read(self.size - 1):
+        while data := src_.read(self.check_size):
             res.write(pow(int.from_bytes(data, 'little'), self.e, self.n).to_bytes(self.size, 'little'))
-
         return res.getvalue()
 
 
