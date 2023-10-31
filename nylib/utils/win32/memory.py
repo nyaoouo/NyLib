@@ -10,8 +10,8 @@ from .exception import WinAPIError
 def alloc(
         handle,
         size: int,
-        allocation_type=structure.MEMORY_STATE.MEM_COMMIT.value,
-        protection_type=structure.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE.value
+        allocation_type=structure.MEMORY_STATE.MEM_COMMIT | structure.MEMORY_STATE.MEM_RESERVE,
+        protection_type=structure.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE
 ) -> int:
     windll.kernel32.SetLastError(0)
     address = kernel32.VirtualAllocEx(
@@ -24,6 +24,43 @@ def alloc(
     err_code = kernel32.GetLastError()
     if err_code: raise WinAPIError(err_code, "VirtualAllocEx")
     return address
+
+
+def alloc_near(
+        handle,
+        size: int,
+        near_addr: int,
+        allocation_type=structure.MEMORY_STATE.MEM_COMMIT | structure.MEMORY_STATE.MEM_RESERVE,
+        protection_type=structure.MEMORY_PROTECTION.PAGE_EXECUTE_READWRITE
+):
+    for mbi in iter_memory_region(handle, max(near_addr - 0x7fff0000, 0), near_addr + 0x7fff0000):
+        if mbi.State & structure.MEMORY_STATE.MEM_FREE:
+            #  the last four digits of the address must all be zero
+            pos = (mbi.BaseAddress + 0xffff) & ~0xffff
+            if mbi.RegionSize - (pos - mbi.BaseAddress) >= size:
+                windll.kernel32.SetLastError(0)
+                res = kernel32.VirtualAllocEx(
+                    handle,
+                    pos,
+                    size,
+                    allocation_type,
+                    protection_type
+                )
+                err_code = kernel32.GetLastError()
+                if err_code: raise WinAPIError(err_code, "VirtualAllocEx")
+                return res
+    raise ValueError("No suitable memory region")
+
+
+def free(handle, address: int, size: int = 0, free_type=structure.MEMORY_STATE.MEM_RELEASE):
+    windll.kernel32.SetLastError(0)
+    if kernel32.VirtualFreeEx(
+            handle,
+            address,
+            size,
+            free_type
+    ): return
+    raise WinAPIError(kernel32.GetLastError(), "VirtualFreeEx")
 
 
 def iter_memory_region(handle, start=0, end=None):
