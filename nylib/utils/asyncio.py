@@ -1,8 +1,11 @@
 import asyncio
 import inspect
 import threading
+import typing
 from functools import wraps, partial
 from .threading import terminate_thread
+
+_T = typing.TypeVar('_T')
 
 
 def to_async_func(func):
@@ -37,15 +40,15 @@ async def sub_thread_async(func, *args, _timeout: float | None = None, **kwargs)
             terminate_thread(t)
 
 
-class AsyncResEvent(asyncio.Event):
-    def __init__(self):
+class AsyncResEvent(asyncio.Event, typing.Generic[_T]):
+    def __init__(self, loop=None):
         super().__init__()
         self.res = None
         self.is_exc = False
-        self._loop = asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_event_loop()
         self.is_waiting = False
 
-    def set(self, data=None) -> None:
+    def set(self, data: _T = None) -> None:
         assert not self.is_set()
         self.res = data
         self.is_exc = False
@@ -57,7 +60,7 @@ class AsyncResEvent(asyncio.Event):
         self.is_exc = True
         self._loop.call_soon_threadsafe(super().set)
 
-    async def wait(self, timeout: float | None = None):
+    async def wait(self, timeout: float | None = None) -> _T:
         self.is_waiting = True
         try:
             await asyncio.wait_for(super().wait(), timeout)
