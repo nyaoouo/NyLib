@@ -193,6 +193,84 @@ def test():
     test_any_key_select()
     test_any_key_drop()
 
+    # Writing test cases for magic methods (__getitem__, __setitem__, __delitem__) in MultiKeyDict
+
+    def test_magic_getitem():
+        # Test __getitem__ magic method
+        mkd = MultiKeyDict(2)
+        mkd.update(100, 'a', 'b')
+        assert mkd['a', 'b'] == 100, "__getitem__ did not return the correct value"
+
+        try:
+            _ = mkd['a', 'c']  # Key not present
+        except KeyError:
+            pass  # Expected behavior
+        else:
+            assert False, "__getitem__ did not raise KeyError for non-existent key"
+
+    def test_magic_setitem():
+        # Test __setitem__ magic method
+        mkd = MultiKeyDict(2)
+        mkd['c', 'd'] = 200
+        assert mkd['c', 'd'] == 200, "__setitem__ did not correctly set the value"
+
+        try:
+            mkd['e'] = 300  # Incorrect key size
+        except KeyError:
+            pass  # Expected behavior
+        else:
+            assert False, "__setitem__ did not raise KeyError for incorrect key size"
+
+    def test_magic_delitem():
+        # Test __delitem__ magic method
+        mkd = MultiKeyDict(2)
+        mkd['g', 'h'] = 400
+        del mkd['g', 'h']
+
+        try:
+            _ = mkd['g', 'h']
+        except KeyError:
+            pass  # Expected behavior
+        else:
+            assert False, "__delitem__ did not correctly delete the item"
+
+    # Running the magic method tests
+    test_magic_getitem()
+    test_magic_setitem()
+    test_magic_delitem()
+
+    # Writing test cases for len, contains, and iter methods in MultiKeyDict
+
+    def test_len_method():
+        # Test __len__ method
+        mkd = MultiKeyDict(2)
+        mkd['a', 'b'] = 500
+        mkd['a', 'c'] = 600
+        assert len(mkd) == 2, "__len__ did not return the correct length"
+
+    def test_contains_method():
+        # Test __contains__ method
+        mkd = MultiKeyDict(2)
+        mkd['x', 'y'] = 700
+        assert ('x', 'y') in mkd, "__contains__ did not find the existing key"
+        assert ('x', 'z') not in mkd, "__contains__ incorrectly found a non-existing key"
+
+    def test_iter_method():
+        # Test __iter__ method
+        mkd = MultiKeyDict(2)
+        mkd['p', 'q'] = 800
+        mkd['p', 'r'] = 900
+
+        keys = list(iter(mkd))
+        expected_keys = [('p', 'q'), ('p', 'r')]
+        assert all(key in expected_keys for key in keys), "__iter__ did not iterate correctly"
+        assert len(keys) == len(expected_keys), "__iter__ did not return the correct number of keys"
+
+    # Running the tests for len, contains, and iter methods
+    test_len_method()
+    test_contains_method()
+    test_iter_method()
+
     print("All tests passed!")
 
 
