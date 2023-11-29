@@ -1,3 +1,4 @@
+import ast
 import collections
 import contextlib
 import ctypes
@@ -267,3 +268,20 @@ class LRU(collections.OrderedDict[_T, _T2]):
     def __setitem__(self, key, value):
         with self.__lock:
             self.__setitem(key, value)
+
+
+def exec_ret(script, globals=None, locals=None, *, filename="<string>"):
+    '''Execute a script and return the value of the last expression'''
+    stmts = list(ast.iter_child_nodes(ast.parse(script)))
+    if not stmts:
+        return None
+    if isinstance(stmts[-1], ast.Expr):
+        # the last one is an expression and we will try to return the results
+        # so we first execute the previous statements
+        if len(stmts) > 1:
+            exec(compile(ast.Module(body=stmts[:-1]), filename=filename, mode="exec"), globals, locals)
+        # then we eval the last one
+        return eval(compile(ast.Expression(body=stmts[-1].value), filename=filename, mode="eval"), globals, locals)
+    else:
+        # otherwise we just execute the entire code
+        return exec(compile(script, filename=filename, mode='exec'), globals, locals)
