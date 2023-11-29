@@ -20,7 +20,7 @@ def is_point_in_circle(point: glm.vec2, center: glm.vec2, radius: float):
     return glm.distance(point, center) <= radius
 
 
-def is_point_in_rect(point: glm.vec2, rect_points: list[glm.vec2]):
+def is_point_in_rect(point: glm.vec2, rect_points: list[glm.vec2] | tuple[glm.vec2, ...]):
     assert len(rect_points) == 4
     p1, p2, p3, p4 = rect_points
     if glm.dot(point - p4, p4 - p1) > 0: return False
@@ -40,7 +40,7 @@ def is_point_on_line(point: glm.vec2, line_start: glm.vec2, line_end: glm.vec2):
     return 0 <= glm.dot(point - line_start, v_se) / line_len <= line_len
 
 
-def is_point_in_poly(point: glm.vec2, polygon_points: list[glm.vec2]):
+def is_point_in_poly(point: glm.vec2, polygon_points: list[glm.vec2] | tuple[glm.vec2, ...]):
     if len(polygon_points) < 3: return False
     cnt = 0
     for i in range(len(polygon_points)):
@@ -88,7 +88,7 @@ def is_circle_intersect_sector(
 
 def is_circle_intersect_rect(
         circle_center: glm.vec2, circle_radius: float,
-        rect_points: list[glm.vec2]
+        rect_points: list[glm.vec2] | tuple[glm.vec2, ...]
 ):
     assert len(rect_points) == 4
     return is_point_in_rect(circle_center, rect_points) or any(is_point_in_circle(p, circle_center, circle_radius) for p in rect_points)
