@@ -21,7 +21,7 @@ class PipeHandlerBase:
     period = .001
 
     def __init__(self):
-        self.serve_thread = threading.Thread(target=self.serve, daemon=False)
+        self.serve_thread = threading.Thread(target=self.serve, daemon=True)
         self.work = False
         self.is_connected = threading.Event()
         self.read_overlapped = win32file.OVERLAPPED()
@@ -97,7 +97,7 @@ class PipeServer(typing.Generic[_T]):
         self.name = name
         self.buf_size = buf_size
         self.handler_class = handler_class
-        self.serve_thread = threading.Thread(target=self.serve)
+        self.serve_thread = threading.Thread(target=self.serve,daemon=True)
         self.client_counter = 0
         self.handlers = {}
         self.work = False
