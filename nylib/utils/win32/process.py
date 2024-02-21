@@ -82,7 +82,7 @@ def get_module_by_name(handle, module_name: bytes):
 def inject_dll(handle, filepath):
     if not (load_library_a_address := kernel32.GetProcAddress(get_module_by_name(handle, b'kernel32.dll').lpBaseOfDll, b"LoadLibraryA")):
         raise exception.WinAPIError()
-    return remote_call(handle, load_library_a_address, filepath)
+    return remote_call(handle, load_library_a_address, filepath + b'\0')
 
 
 # def inject_dll(handle, filepath):

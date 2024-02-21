@@ -69,12 +69,12 @@ def run_rpc_server_main():
         handler.stream = sys.stdout
     mutex = Mutex(lock_file_name)
     if not mutex.is_lock():
-        sys.modules['inject_server'] = server
+        setattr(sys, '__inject_server__', server)
         with mutex: server.serve()
 import traceback
 import ctypes
+import sys
 try:
-    import sys
     sys.path = {repr(sys.path + self.paths)} + sys.path
     run_rpc_server_main()
 except:
